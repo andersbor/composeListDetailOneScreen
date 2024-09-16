@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -35,7 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,21 +42,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.listdetailonescreen.ui.theme.ListDetailOneScreenTheme
-import kotlinx.coroutines.launch
+
+// Noget om ui state
+// https://betterprogramming.pub/managing-jetpack-compose-ui-state-with-sealed-classes-d864c1609279
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ListDetailOneScreenTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    //BookScreen()
-                    BooksScaffold()
-                }
+                BooksScaffold()
             }
         }
     }
@@ -68,33 +60,29 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BooksScaffold(modifier: Modifier = Modifier) {
-    val scope = rememberCoroutineScope()
+    //val scope = rememberCoroutineScope()
     var adding by remember { mutableStateOf(false) }
+    // TODO stopAdding is better, or setAdding?
     val toggleAdding = { adding = !adding }
-    //val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         modifier = modifier,
-        /*snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
-        },*/
+        // https://developer.android.com/develop/ui/compose/components/app-bars
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 ),
-                title = {
-                    Text("Books")
-                }
+                title = { Text("Books") }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    scope.launch {
-                        adding = true
-                    }
+                    //scope.launch {
+                    adding = true
+                    //}
                 }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
@@ -108,7 +96,7 @@ fun BooksScaffold(modifier: Modifier = Modifier) {
 // Very general example https://blog.stylingandroid.com/compose-list-detail-basics/
 @Composable
 fun BooksScreen(
-    values: PaddingValues = PaddingValues(0.dp),
+    paddingValues: PaddingValues = PaddingValues(0.dp),
     adding: Boolean,
     toggleAdding: () -> Unit = {}
 ) {
@@ -123,14 +111,19 @@ fun BooksScreen(
         )
     }
     var book by remember { mutableStateOf<Book?>(null) }
-    Column(modifier = Modifier.padding(values).padding(5.dp)) {
+    Column(
+        modifier = Modifier
+            .padding(paddingValues)
+            .padding(5.dp)
+    ) {
         if (book != null && !adding) BookDetails(book)
         if (adding) AddPanel(add = {
             books.add(it)
             toggleAdding()
-            //book = it
+        }, cancelAdd = {
+            toggleAdding()
         })
-        BookList(books,
+        BookListPanel(books,
             onClick = { book = it },
             onClickDelete = {
                 books.remove(it)
@@ -155,7 +148,7 @@ fun BookDetails(book: Book?, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AddPanel(add: (Book) -> Unit = {}) {
+fun AddPanel(add: (Book) -> Unit = {}, cancelAdd: () -> Unit = {}) {
     var author by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
     var priceStr by remember { mutableStateOf("") }
@@ -163,7 +156,6 @@ fun AddPanel(add: (Book) -> Unit = {}) {
         val price = priceStr.toDoubleOrNull() ?: 0.0
         val book = Book(0, title, author, price)
         add(book)
-
     }
     Column {
         OutlinedTextField(
@@ -186,17 +178,21 @@ fun AddPanel(add: (Book) -> Unit = {}) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth(),
-
-            ) {
-            OutlinedTextField(
+        ) {
+            OutlinedTextField(modifier = Modifier.weight(2f),
                 value = priceStr,
                 onValueChange = { priceStr = it },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 label = { Text("Price") }
             )
-            Button(onClick = {
-                // TODO close keyboard
-                //LocalSoftwareKeyboardController.current?.hide()
+            Button(modifier = Modifier
+                .weight(1f)
+                .padding(2.dp), onClick = { cancelAdd() }) {
+                Text("Cancel")
+            }
+            Button(modifier = Modifier
+                .weight(1f)
+                .padding(2.dp), onClick = {
                 localAdd()
             }) {
                 Text("Add")
@@ -206,15 +202,14 @@ fun AddPanel(add: (Book) -> Unit = {}) {
 }
 
 @Composable
-fun BookList(
+fun BookListPanel(
     books: List<Book>,
     modifier: Modifier = Modifier,
     onClick: (Book) -> Unit = {},
     onClickDelete: (Book) -> Unit = {}
 ) {
-    // TODO LazyColumn
     LazyColumn(modifier = modifier) {
-        items(books) {book ->
+        items(books) { book ->
             BookItem(book, onClick = onClick, onClickDelete = onClickDelete)
         }
     }
@@ -232,7 +227,7 @@ fun BookItem(
     onClick: (Book) -> Unit = {},
     onClickDelete: (Book) -> Unit = {}
 ) {
-    Card(modifier = Modifier
+    Card(modifier = modifier
         .fillMaxWidth()
         .padding(5.dp),
         onClick = { onClick(book) }) {
@@ -253,7 +248,7 @@ fun BookItem(
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun BooksPreview() {
     ListDetailOneScreenTheme {
         //BooksScreen()
         BooksScaffold()
