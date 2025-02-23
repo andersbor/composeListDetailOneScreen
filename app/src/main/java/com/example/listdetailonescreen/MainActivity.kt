@@ -43,7 +43,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.listdetailonescreen.ui.theme.ListDetailOneScreenTheme
 
-// Noget om ui state
 // https://betterprogramming.pub/managing-jetpack-compose-ui-state-with-sealed-classes-d864c1609279
 
 class MainActivity : ComponentActivity() {
@@ -110,13 +109,13 @@ fun BooksScreen(
             Book(6, "Kotlin for the win", "Anders B", 29.95),
         )
     }
-    var book by remember { mutableStateOf<Book?>(null) }
+    var selectedBook by remember { mutableStateOf<Book?>(null) }
     Column(
         modifier = Modifier
             .padding(paddingValues)
-            .padding(5.dp)
+            .padding(8.dp)
     ) {
-        if (book != null && !adding) BookDetails(book)
+        if (selectedBook != null && !adding) BookDetails(selectedBook!!)
         if (adding) AddPanel(add = {
             books.add(it)
             toggleAdding()
@@ -124,26 +123,22 @@ fun BooksScreen(
             toggleAdding()
         })
         BookListPanel(books,
-            onClick = { book = it },
+            onClick = { selectedBook = it },
             onClickDelete = {
                 books.remove(it)
-                if (it == book) {
-                    book = null
+                if (it == selectedBook) {
+                    selectedBook = null
                 }
             })
     }
 }
 
 @Composable
-fun BookDetails(book: Book?, modifier: Modifier = Modifier) {
-    if (book != null) {
-        Column(modifier = modifier) {
-            Text(text = book.title)
-            Text(text = book.author)
-            Text(text = book.price.toString())
-        }
-    } else {
-        Text(text = "No book selected", modifier = modifier)
+fun BookDetails(book: Book, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(8.dp)) {
+        Text(text = book.title)
+        Text(text = book.author)
+        Text(text = book.price.toString())
     }
 }
 
@@ -231,7 +226,10 @@ fun BookItem(
         .fillMaxWidth()
         .padding(5.dp),
         onClick = { onClick(book) }) {
-        Row(modifier = Modifier.padding(2.dp)) {
+        Row(
+            modifier = Modifier.padding(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = book.author,
                 modifier = Modifier.padding(8.dp),
